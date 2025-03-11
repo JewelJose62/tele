@@ -518,7 +518,7 @@ exports.login = async (req, res) => {
     req.session.token = token;
     console.log(`✅ User ${email} logged in successfully!`);
 
-    res.redirect('/chat');
+    res.redirect('/welcome');
 
   } catch (error) {
     console.error("Login Error:", error);
