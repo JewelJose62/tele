@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const UserSchema = new mongoose.Schema({
   profile: {
       profilePicture: { type: String, default: '' },
-      username: { type: String, required: true , unique:true},
+      username: { type: String, required: true},
       bio: { type: String, default: '', maxlength: 200 }
   },
   email: { type: String, required: true, unique: true },
@@ -31,3 +31,10 @@ UserSchema.methods.isOtpValid = function (inputOtp) {
 };
 
 module.exports = mongoose.model('User', UserSchema);
+
+
+
+
+
+
+
