@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat App</title>
+  <link rel="stylesheet" href="/css/chat.css">
+</head>
+<body>
+
+  <div class="chat-header">Chat App</div>
+
+  <div class="chat-container">
+    
+    <!-- Active Users Panel -->
+    <div class="active-users-panel">
+      <h2>Active Users</h2>
+      <input type="text" id="user-search" placeholder="Search for users...">
+      <ul id="active-users"></ul>
+    </div>
+
+    <!-- Chat Window -->
+    <div class="chat-window">
+      <div id="chat-header">Private Chat</div>
+      <div id="messages-container">
+        <ul id="messages"></ul>
+      </div>
+      <div class="chat-input">
+        <input id="input" autocomplete="off" placeholder="Type a message..."/>
+        <button id="send-message">Send</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+   const socket = io();
+const username = prompt("Enter your username:");
+socket.emit('user joined', username);
+
+let currentChatUser = null;
+
+// Listen for active users update
+socket.on('active users', function(data) {
+  $('#active-users').empty();
+  data.active.forEach(user => {
+    $('#active-users').append($('<li>').text(user).click(function() {
+      startPrivateChat(user);
+    }));
+  });
+});
+
+// Function to load chat history when starting a chat
+function startPrivateChat(user) {
+  currentChatUser = user;
+  $('#messages').empty();
+  $('#messages').append($('<li class="info">').text(`You are now chatting with ${user}`));
+
+  // Fetch chat history from the server
+  $.get(`/chat-history?user1=${username}&user2=${user}`, function(messages) {
+    messages.forEach(msg => {
+      displayMessage(msg.sender, msg.message, msg.timestamp, msg.status, msg._id);
+    });
+  });
+
+  $('#send-message').off('click').on('click', function() {
+    const message = $('#input').val();
+    if (message.trim() !== '') {
+      const timestamp = new Date().toLocaleTimeString();
+      const messageData = { to: user, from: username, message, timestamp };
+
+      socket.emit('private message', messageData);
+      $('#input').val('');
+    }
+  });
+}
+
+// Function to display messages
+function displayMessage(from, message, timestamp, status = 'sent', messageId = null) {
+  const isSentByUser = (from === username);
+  const displayName = isSentByUser ? 'You' : from;
+  
+  // Status Symbols
+  let statusSymbol = (status === 'sent') ? '✔' :
+                     (status === 'delivered') ? '✔✔' :
+                     (status === 'seen') ? '✔✔✔' : '';
+
+  // Create message element with alignment
+  const messageElement = $('<li>')
+    .html(`${message} <span class="status">${statusSymbol}</span><br><small>${timestamp}</small>`)
+    .addClass(isSentByUser ? 'sent' : 'received')  // Align sent (right) & received (left)
+    .attr('data-message-id', messageId);
+
+  $('#messages').append(messageElement);
+}
+
+// Listen for incoming messages
+socket.on('private message', function(data) {
+  const { from, message, timestamp, status, messageId } = data;
+  displayMessage(from, message, timestamp, status, messageId);
+
+  // If received by the current user, mark as 'delivered'
+  if (from === currentChatUser) {
+    socket.emit('message delivered', { messageId, sender: from });
+  }
+});
+
+// Update message status in UI when status changes
+socket.on('message status update', function(data) {
+  const { messageId, status } = data;
+  const messageElement = $(`li[data-message-id="${messageId}"]`);
+  if (messageElement.length > 0) {
+    let statusSymbol = (status === 'delivered') ? '✔✔' : '✔✔✔';
+    messageElement.find('.status').text(statusSymbol);
+  }
+});
+
+// Mark messages as seen when opening chat
+$('#messages-container').on('click', function() {
+  $('#messages li[data-message-id]').each(function() {
+    const messageId = $(this).attr('data-message-id');
+    socket.emit('message seen', { messageId, sender: currentChatUser });
+  });
+});
+
+  </script>
+</body>
+</html>

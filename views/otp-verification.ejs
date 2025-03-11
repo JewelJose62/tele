@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify OTP</title>
+  <link rel="stylesheet" href="/css/verify.css">
+</head>
+<body>
+  <div class="modal-container">
+    <div class="modal">
+      <h2>OTP Verification</h2>
+      <p>OTP sent to <strong><%= email %></strong>. Please enter it below.</p>
+
+      <form id="otp-form">
+        <input type="text" id="otp-input" name="otp" placeholder="Enter OTP" required>
+        <button type="submit">Verify</button>
+      </form>
+
+      <p id="error-message" style="color: red; display: none;">Invalid OTP. Try again.</p>
+      <button id="resend-otp">Resend OTP</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("otp-form").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const otp = document.getElementById("otp-input").value;
+      const response = await fetch("/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "<%= email %>", otp })
+      });
+
+      if (response.ok) {
+        window.location.href = "/login";
+      } else {
+        document.getElementById("error-message").style.display = "block";
+      }
+    });
+
+    document.getElementById("resend-otp").addEventListener("click", async function() {
+      const response = await fetch("/resend-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+
+      if (response.ok) {
+        alert("New OTP sent to your email.");
+      } else {
+        alert("Error resending OTP. Please try again.");
+      }
+    });
+  </script>
+</body>
+</html>
