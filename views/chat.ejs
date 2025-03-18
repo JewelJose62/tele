@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat App</title>
+  <link rel="stylesheet" href="/css/chat.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+</head>
+<body>
+
+  <div class="chat-header">
+    Chat App - Logged in : <%= username %>
+  </div>
+
+  <div class="chat-container">
+    <div class="active-users-panel">
+      <h2>Active Users</h2>
+      <input type="text" id="user-search" placeholder="Search for users...">
+      <div id="active-users-container">
+        <% if (users && users.length > 0) { %>
+          <% users.forEach(function(user) { %>
+            <div class="user-card" onclick="startPrivateChat('<%= user.profile.username %>')">
+              <span class="user-name"><%= user.profile.username %></span>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <div class="user-card">No other users available</div>
+        <% } %>
+      </div>
+    </div>
+    
+    <div id="conversation-tabs"></div>
+    <div class="chat-window">
+      <div id="chat-header">
+        <span id="chat-title">Private Chat</span>
+      </div>
+      
+      <div id="messages-container">
+        <ul id="messages"></ul>
+      </div>
+      <div class="chat-input">
+        <input id="input" autocomplete="off" placeholder="Type a message..."/>
+        <button id="send-message">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    const username = "<%= username %>";
+    const socket = io();
+    socket.emit('user joined', username);
+
+    let currentChatUser = null;
+    const conversations = {};
+    function addConversationTab(user) {
+    if (!$(`#tab-${user}`).length) {
+        $('#conversation-tabs').append(
+            `<div class="tab" id="tab-${user}" onclick="switchConversation('${user}')">
+                <i class="fas fa-comments"></i> Chat
+            </div>`
+        );
+    }
+}
+
+
+    function switchConversation(user) {
+    currentChatUser = user;
+
+    
+    document.getElementById("chat-title").innerText = `You are now chatting with ${user}`;
+
+    $('#messages').empty();
+
+    if (conversations[user]) {
+        conversations[user].forEach(msg => displayMessage(msg.sender, msg.message, msg.timestamp, msg.status, msg._id));
+
+        const unseenMessages = conversations[user].filter(msg => msg.sender === user && msg.status !== 'seen');
+        unseenMessages.forEach(msg => {
+            socket.emit("message seen", { messageId: msg._id, sender: msg.sender });
+        });
+    } else {
+        
+        socket.emit('load chat history', { user1: username, user2: user });
+    }
+}
+
+
+    function startPrivateChat(user) {
+      addConversationTab(user);
+      switchConversation(user);
+    }
+
+    function displayMessage(from, message, timestamp, status = 'sent', messageId = null) {
+      const isSentByUser = (from === username);
+      let statusSymbol = isSentByUser ? `<span class="status sent">✔</span>` : "";
+
+      if (status === "delivered" && isSentByUser) {
+        statusSymbol = `<span class="status delivered">✔✔</span>`;
+      } else if (status === "seen" && isSentByUser) {
+        statusSymbol = `<span class="status seen">✔✔</span>`;
+      }
+
+      const messageElement = $(`li[data-message-id="${messageId}"]`);
+      if (messageElement.length > 0) {
+        messageElement.find('.status').replaceWith(statusSymbol);
+      } else {
+        $("#messages").append(`
+          <li class="${isSentByUser ? "sent" : "received"}" data-message-id="${messageId}">
+            ${message} ${statusSymbol}
+            <br><small>${timestamp}</small>
+          </li>
+        `);
+      }
+    }
+
+    $('#send-message').click(function() {
+      if (!currentChatUser) {
+        alert("Select a user to chat with.");
+        return;
+      }
+      const message = $('#input').val().trim();
+      if (message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const messageData = { to: currentChatUser, from: username, message, timestamp };
+        socket.emit('private message', messageData);
+        displayMessage(username, message, timestamp, 'sent');
+        if (!conversations[currentChatUser]) conversations[currentChatUser] = [];
+        conversations[currentChatUser].push({ sender: username, message, timestamp, status: 'sent' });
+        $('#input').val('');
+      }
+    });
+
+    socket.on('private message', function (data) {
+    const { from, message, timestamp, status, messageId } = data;
+    if (!conversations[from]) conversations[from] = [];
+    conversations[from].push({ sender: from, message, timestamp, status, _id: messageId });
+    if (from === currentChatUser) {
+        displayMessage(from, message, timestamp, status, messageId);
+        socket.emit("message delivered", { messageId, sender: from });
+    }
+});
+
+
+socket.on('chat history', function(messages) {
+    $('#messages').empty();  // Clear previous messages
+    messages.forEach(msg => displayMessage(msg.sender, msg.message, msg.timestamp, msg.status, msg._id));
+});
+
+
+    socket.on('message status update', function(data) {
+      const { messageId, status } = data;
+      let messageElement = $(`li[data-message-id="${messageId}"]`);
+      
+      if (messageElement.length > 0) {
+        let statusSymbol = `<span class="status sent">✔</span>`;
+        if (status === 'delivered') {
+          statusSymbol = `<span class="status delivered">✔✔</span>`;
+        } else if (status === 'seen') {
+          statusSymbol = `<span class="status seen">✔✔</span>`;
+        }
+        messageElement.find('.status').replaceWith(statusSymbol);
+      }
+    });
+
+    $('#messages-container').click(function() {
+    $('#messages li[data-message-id]').each(function() {
+        const messageId = $(this).attr('data-message-id');
+        socket.emit('message seen', { messageId, sender: currentChatUser });
+    });
+});
+
+
+    $('#user-search').on('input', function() {
+      const searchValue = $(this).val().toLowerCase();
+      $('#active-users-container .user-card').each(function() {
+        $(this).toggle($(this).find('.user-name').text().toLowerCase().includes(searchValue));
+      });
+    });
+  </script>
+</body>
+</html>

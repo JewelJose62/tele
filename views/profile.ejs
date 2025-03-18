@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <link rel="stylesheet" href="/css/profile.css">
+</head>
+<body>
+    <header>
+        <h1>Profile Page</h1>
+        <a href="/logout">Logout</a>
+    </header>
+    
+    <div class="profile-container">
+        <!-- Profile Picture -->
+        <img src="<%= user.profile.profilePicture ? user.profile.profilePicture : '/uploads/default.png' %>" alt="Profile Picture">
+        
+        <!-- Username -->
+        <h2><%= user.profile.username %></h2>
+    
+        <!-- Bio -->
+        <p><%= user.profile.bio ? user.profile.bio : "No bio added yet." %></p>
+        
+        <form action="/profile/update" method="POST" enctype="multipart/form-data">
+            <input type="text" name="username" placeholder="New username" value="<%= user.profile.username %>">
+            <textarea name="bio" placeholder="Update your bio"><%= user.profile.bio %></textarea>
+            <input type="file" name="profilePicture">
+            <button type="submit">Update Profile</button>
+        </form>
+    </div>
+    
+<script>
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+        try {
+            await fetch("/logout", { method: "POST", credentials: "include" });
+            window.location.href = "/login"; // Redirect to login page
+        } catch (error) {
+            console.error("Logout failed", error);
+        }
+    });
+</script>
+</body>
+</html>

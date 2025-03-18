@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat App - Log In</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/styles.css"> <!-- Link to external CSS -->
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="form-box">
+      <h1 class="insta-logo">Chat App</h1>
+
+      <% if (error) { %>
+        <p class="error"><%= error %></p>
+      <% } %>
+
+      <form action="/login" method="POST">
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Log In</button>
+      </form>
+
+      <p class="or">OR</p>
+
+      <a href="https://www.facebook.com/" class="fb-login"><i class="fab fa-facebook"></i> Log in with Facebook</a>
+
+      <p class="forgot"><a href="#">Forgot password?</a></p>
+
+    </div>
+
+    <div class="signup-box">
+      <p>Don't have an account? <a href="/register">Sign up</a></p>
+    </div>
+  </div>
+
+</body>
+</html>

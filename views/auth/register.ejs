@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat App - Register</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="/css/styles.css"> <!-- Link to external CSS file -->
+</head>
+<body>
+
+  <div class="signup-container">
+    <div class="form-box">
+      
+      <!-- Instagram Logo & Text -->
+      <div class="logo-container">
+       
+        <h1 class="insta-text">Chat App</h1>
+      </div>
+
+      <% if (error) { %>
+        <p class="error"><%= error %></p>
+      <% } %>
+
+      <!-- Signup Form -->
+      <form action="/register" method="POST">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <input type="password" name="confirmPassword" placeholder="Confirm Password" required>
+        <button type="submit">Sign Up</button>
+      </form>
+
+      <script>
+        document.getElementById("signupForm").addEventListener("submit", async (e) => {
+          e.preventDefault();
+          
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+    
+          // Send signup request
+          const response = await fetch("/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+    
+          const result = await response.json();
+          if (response.status === 200) {
+            alert(result.message);
+            // Show OTP input form
+            document.getElementById("otp-section").style.display = "block";
+          } else {
+            alert(result.message);
+          }
+        });
+    
+        document.getElementById("verifyOtpBtn").addEventListener("click", async () => {
+          const otp = document.getElementById("otp").value;
+          const email = document.getElementById("email").value;
+    
+          // Send OTP verification request
+          const response = await fetch("/verify-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, otp }),
+          });
+    
+          const result = await response.json();
+          alert(result.message);
+        });
+      </script>
+    
+
+      <p class="login-link">Have an account? <a href="/login">Log in</a></p>
+    </div>
+  </div>
+
+</body>
+</html>
